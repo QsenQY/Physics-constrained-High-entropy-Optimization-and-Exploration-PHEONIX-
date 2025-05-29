@@ -11,7 +11,7 @@ High-entropy alloy materials demonstrate exceptional catalytic properties due to
 
 
 - **v1.1** Release:  
-  - [Data.zip (all models and adsorption‐energy statistics)].[(https://github.com/QsenQY/HELIOS-Hydrogen-Evolution-via-Learning-Intelligent-Optimization-of-Superalloys-/releases/download/V1.0.2/Data.zip)].
+  - [Data.zip (all models and adsorption‐energy statistics)].(https://github.com/QsenQY/HELIOS-Hydrogen-Evolution-via-Learning-Intelligent-Optimization-of-Superalloys-/releases/download/V1.0.2/Data.zip).
 
 ## External Dependencies
 
