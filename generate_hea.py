@@ -78,25 +78,31 @@ def calculate_delta(proportions, atomic_radii):
     r_avg = np.sum(proportions * atomic_radii)
     return 100 * np.sqrt(np.sum(proportions * (1 - atomic_radii / r_avg)**2))
 
-def calculate_mixing_enthalpy(elements, proportions, enthalpy_df):
-    """Calculate mixing enthalpy ΔH_mix (kJ/mol)"""
-    H_mix = 0
-    for i in range(len(elements)):
+def calculate_mixing_enthalpy(elements, proportions, H_df):
+    H_mix = 0.0
+    missing_pairs = []
+    for i, ei in enumerate(elements):
         for j in range(i+1, len(elements)):
-            el_i, el_j = elements[i], elements[j]
+            ej = elements[j]
             try:
-                H_ij = enthalpy_df.loc[el_i, el_j]
+                Hij = H_df.loc[ei, ej]
             except KeyError:
                 try:
-                    H_ij = enthalpy_df.loc[el_j, el_i]
+                    Hij = H_df.loc[ej, ei]
                 except KeyError:
-                    H_ij = 0
-            H_mix += 4 * proportions[i] * proportions[j] * H_ij
-    return H_mix
+                    Hij = 0.0
+                    missing_pairs.append((ei, ej))
+            H_mix += 4 * proportions[i] * proportions[j] * Hij
+    if missing_pairs:
+        print("Warning: missing H_ij for pairs:", missing_pairs)
+    return H_mix  # kJ/mol
 
 def calculate_omega(T_m, S_mix, H_mix):
-    """Calculate Omega parameter (dimensionless)"""
-    return (T_m * S_mix) / abs(H_mix * 1000) if H_mix != 0 else 0
+    if abs(H_mix) < 1e-9:
+        return np.nan
+    # kJ → J
+    Hmix_J = H_mix * 1e3  
+    return (T_m * S_mix) / abs(Hmix_J)
 
 def average_lattice_constants(elements, proportions, structure):
     """Compute weighted average lattice constants a and c"""
