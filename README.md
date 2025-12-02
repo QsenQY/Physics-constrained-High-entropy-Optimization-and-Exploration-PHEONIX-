@@ -40,7 +40,8 @@ The PHEONIX framework automates the following key computational stages:
   - [Data.zip (all models and adsorption‐energy statistics)].(https://github.com/QsenQY/HELIOS-Hydrogen-Evolution-via-Learning-Intelligent-Optimization-of-Superalloys-/releases/download/V1.0.2/Data.zip).
 
 
-### fairchem
+## External Dependencies
+**fairchem
 
 - **Documentation** (upstream):  
   https://github.com/facebookresearch/fairchem#readme
