@@ -2,26 +2,24 @@
 """
 compute_eoc_empband_dd_v2.py
 
-改动要点：
-- 全分布 DD：输出 eps=0 / 0.05 / 0.10（列名沿用 eps0、eps005、eps010）
-- 条件 DD：只在“重叠窗口”内计算（EmpBand q=0.866；SB k=1.5；可选 k=1）
-- 仍输出：EOC、EmpBand(q=0.68/0.866)、ShuttleBand(k=1/1.5)、NOF(±0.05/±0.10)
+Key Changes:
+- Global DD: Outputs eps=0 / 0.05 / 0.10 (column names: eps0, eps005, eps010)
+- Conditional DD: Computed only within "Overlap Windows" (EmpBand q=0.866; SB k=1.5; optional k=1)
+- Still Outputs: EOC, EmpBand(q=0.68/0.866), ShuttleBand(k=1/1.5), NOF(±0.05/±0.10)
 
-依赖：numpy, pandas
-示例（多对一次跑完）：
+Dependencies: numpy, pandas
+Example (Batch processing multiple pairs):
   python compute_eoc_empband_dd_v2.py ^
-    --pair HEA3=HEA3_peak1.csv,HEA3_peak2.csv ^
-    --pair HEA4=HEA4_peak1.csv,HEA4_peak2.csv ^
-    --pair HEA5=HEA5_peak1.csv,HEA5_peak2.csv ^
-    --out HEA3-5_metrics_v2.csv --energy-col 二次预测
+    --pair HEA1=HEA1_peak1.csv,HEA1_peak2.csv ^
+    --out HEA1_metrics_v2.csv --energy-col "Prediction"
 
-可切换 DD 计算法：
-  --dd-method gaussian|kde|empirical   (默认 gaussian；条件DD内部默认用 kde)
+Switchable DD Method:
+  --dd-method gaussian|kde|empirical   (default: gaussian; conditional DD defaults to kde internally)
 
-可选择条件窗口：
-  --cond-windows empband866,sbk15,sbk1    (默认 empband866,sbk15)
+Selectable Conditional Windows:
+  --cond-windows empband866,sbk15,sbk1    (default: empband866,sbk15)
 
-可自定义 DD 阈值集合（逗号分隔）：
+Custom DD Thresholds (comma-separated):
   --dd-eps 0,0.05,0.10
 """
 
@@ -31,7 +29,7 @@ import os
 import numpy as np
 import pandas as pd
 
-# ---------- 基础工具 ----------
+# ---------- Basic Utilities ----------
 
 def robust_read_csv(path, encoding='utf-8-sig'):
     tries = [encoding, 'utf-8', 'gbk', 'gb18030', 'utf-8-sig']
@@ -40,24 +38,21 @@ def robust_read_csv(path, encoding='utf-8-sig'):
             return pd.read_csv(path, encoding=enc)
         except Exception:
             pass
-    raise RuntimeError(f"读取 CSV 失败：{path}")
+    raise RuntimeError(f"Failed to read CSV: {path}")
 
 def pick_energy_series(df: pd.DataFrame, energy_col: str = None) -> np.ndarray:
-    # 取 ΔGH* 一列，默认优先“二次预测”
+    # Select ΔGH* column. Defaults to 'Secondary Prediction' or Chinese equivalents.
     candidates = []
     if energy_col:
         candidates.append(energy_col)
-    candidates += [
-        '二次预测', '二次预测能量', 'Secondary Prediction', 'secondary_prediction',
-        '二次能量', 'ΔGH*', 'DeltaGH', 'delta_g', 'deltaG',
-        '二次预测(eV)', '二次预测_eV'
-    ]
+    # Keep Chinese column names for compatibility with existing datasets
+    candidates += ['Prediction']
     for c in candidates:
         if c in df.columns:
             s = pd.to_numeric(df[c], errors='coerce').astype(float).values
             s = s[np.isfinite(s)]
             return s
-    raise KeyError(f"未找到能量列。请用 --energy-col 指定。可用列：{list(df.columns)}")
+    raise KeyError(f"Energy column not found. Please specify using --energy-col. Available columns: {list(df.columns)}")
 
 def mean_std(arr: np.ndarray):
     if len(arr) == 0:
@@ -89,7 +84,7 @@ def gaussian_kde_on_grid(samples: np.ndarray, grid: np.ndarray, bandwidth: float
     diff = (g[:, None] - s[None, :]) / bandwidth
     phi = np.exp(-0.5 * diff * diff) / math.sqrt(2 * math.pi)
     dens = np.mean(phi, axis=1) / bandwidth
-    # 归一化
+    # Normalization
     area = np.trapz(dens, g)
     if area > 0:
         dens = dens / area
@@ -150,7 +145,7 @@ def dd_probability(sampA: np.ndarray, sampB: np.ndarray, eps: float, method='gau
     if method == 'empirical':
         if len(A) == 0 or len(B) == 0:
             return np.nan
-        # O(n^2) 经验估计
+        # O(n^2) empirical estimation
         AA = A[:, None]
         BB = B[None, :]
         return float(((AA - BB) >= eps).mean())
@@ -167,7 +162,7 @@ def dd_probability(sampA: np.ndarray, sampB: np.ndarray, eps: float, method='gau
         val = float(np.trapz(fA * FB_shift, grid))
         return float(np.clip(val, 0.0, 1.0))
 
-    else:  # gaussian（闭式）
+    else:  # gaussian (closed form)
         muA, sdA = mean_std(A)
         muB, sdB = mean_std(B)
         var = sdA ** 2 + sdB ** 2
@@ -183,7 +178,7 @@ def filter_region(arr: np.ndarray, lo: float, hi: float):
     return arr[(arr >= lo) & (arr <= hi)]
 
 def eps_label(eps: float) -> str:
-    # 兼容你的命名：0 -> eps0；0.05 -> eps005；0.10 -> eps010；其它按 meV 三位
+    # Naming convention: 0 -> eps0; 0.05 -> eps005; 0.10 -> eps010; others in meV (3 digits)
     if abs(eps) < 1e-12:
         return "eps0"
     if abs(eps - 0.05) < 1e-9:
@@ -192,7 +187,7 @@ def eps_label(eps: float) -> str:
         return "eps010"
     return f"eps{int(round(eps * 1000)):03d}"
 
-# ---------- 单个体系计算 ----------
+# ---------- Calculation for a Single Pair ----------
 
 def compute_metrics_for_pair(
     surf_path: str,
@@ -210,7 +205,7 @@ def compute_metrics_for_pair(
     Es = pick_energy_series(df_s, energy_col=energy_col)
     Eb = pick_energy_series(df_b, energy_col=energy_col)
 
-    # 基本统计
+    # Basic Statistics
     mu_s, sd_s = mean_std(Es)
     mu_b, sd_b = mean_std(Eb)
     n_s, n_b = len(Es), len(Eb)
@@ -218,7 +213,7 @@ def compute_metrics_for_pair(
     # EOC
     eoc = eoc_from_kde(Es, Eb)
 
-    # 全分布 DD
+    # Global DD
     dd_vals = {}
     for eps in dd_eps_list:
         lab = eps_label(eps)
@@ -239,9 +234,9 @@ def compute_metrics_for_pair(
     eb68_w, eb68_ms, eb68_mb, eb68_cs, eb68_cb, eb68_lo, eb68_hi   = empband_from_samples(Es, Eb, q=0.68)
     eb866_w, eb866_ms, eb866_mb, eb866_cs, eb866_cb, eb866_lo, eb866_hi = empband_from_samples(Es, Eb, q=0.866)
 
-    # 条件 DD（可交换能区内；条件窗口：EmpBand866 / SBk15 / SBk1）
+    # Conditional DD (Within exchangeable energy regions; Windows: EmpBand866 / SBk15 / SBk1)
     cond_dd = {}
-    # 统一使用 kde（截断后形状更贴合）
+    # Use KDE internally (fits better after truncation)
     def add_cond_dd(tag: str, A: np.ndarray, B: np.ndarray):
         if len(A) >= min_cond_count and len(B) >= min_cond_count:
             for eps in dd_eps_list:
@@ -269,7 +264,7 @@ def compute_metrics_for_pair(
         mu_surf_eV=mu_s, sigma_surf_eV=sd_s, n_surf=n_s,
         mu_sub_eV=mu_b,  sigma_sub_eV=sd_b, n_sub=n_b,
         EOC=eoc,
-        # 全分布 DD
+        # Global DD
         **dd_vals,
         # NOF
         NOF_Surf_w005=nof_s_005, NOF_Sub_w005=nof_b_005,
@@ -288,7 +283,7 @@ def compute_metrics_for_pair(
         EmpBand866_surf_mass=eb866_ms, EmpBand866_sub_mass=eb866_mb,
         EmpBand866_surf_count=eb866_cs, EmpBand866_sub_count=eb866_cb,
         EmpBand866_lo_eV=eb866_lo, EmpBand866_hi_eV=eb866_hi,
-        # 条件 DD
+        # Conditional DD
         **cond_dd,
     )
     return row
@@ -299,7 +294,7 @@ def parse_pairs(pairs_list):
     out = []
     for item in pairs_list:
         if '=' not in item or ',' not in item:
-            raise ValueError(f"--pair 格式错误：{item}")
+            raise ValueError(f"Format error in --pair: {item}")
         hea, rest = item.split('=', 1)
         surf_csv, sub_csv = rest.split(',', 1)
         out.append((hea.strip(), surf_csv.strip(), sub_csv.strip()))
@@ -307,24 +302,24 @@ def parse_pairs(pairs_list):
 
 def main():
     ap = argparse.ArgumentParser(description="Compute EOC / EmpBand / DD (global & conditional) metrics from peak1/peak2 CSVs")
-    ap.add_argument("--surf", type=str, help="表面(peak1) CSV 路径（单对模式）")
-    ap.add_argument("--sub", type=str, help="次表(peak2) CSV 路径（单对模式）")
-    ap.add_argument("--hea-name", type=str, help="HEA 名称（单对模式）")
+    ap.add_argument("--surf", type=str, help="Path to Surface (peak1) CSV (Single-pair mode)")
+    ap.add_argument("--sub", type=str, help="Path to Subsurface (peak2) CSV (Single-pair mode)")
+    ap.add_argument("--hea-name", type=str, help="HEA Name (Single-pair mode)")
     ap.add_argument("--pair", type=str, action="append",
-                    help="多对模式：HEA=surf.csv,sub.csv，可重复")
-    ap.add_argument("--out", type=str, required=True, help="输出汇总 CSV 路径")
-    ap.add_argument("--energy-col", type=str, default="二次预测", help="ΔGH* 列名")
-    ap.add_argument("--encoding", type=str, default="utf-8-sig", help="输入编码（默认 utf-8-sig）")
+                    help="Multi-pair mode: HEA=surf.csv,sub.csv (can be repeated)")
+    ap.add_argument("--out", type=str, required=True, help="Path to output summary CSV")
+    ap.add_argument("--energy-col", type=str, default="二次预测", help="Column name for ΔGH*")
+    ap.add_argument("--encoding", type=str, default="utf-8-sig", help="Input encoding (default: utf-8-sig)")
     ap.add_argument("--dd-method", type=str, default="gaussian",
-                    choices=["gaussian", "kde", "empirical"], help="全分布 DD 方法（默认 gaussian）")
+                    choices=["gaussian", "kde", "empirical"], help="Global DD calculation method (default: gaussian)")
     ap.add_argument("--dd-eps", type=str, default="0,0.05,0.10",
-                    help="DD 阈值集合，逗号分隔，如 0,0.05,0.10")
+                    help="DD thresholds, comma-separated, e.g., 0,0.05,0.10")
     ap.add_argument("--cond-windows", type=str, default="empband866,sbk15",
-                    help="条件 DD 窗口，逗号分隔：empband866,sbk15,sbk1")
-    ap.add_argument("--min-cond-count", type=int, default=10, help="条件窗口内最少样本数")
+                    help="Conditional DD windows, comma-separated: empband866,sbk15,sbk1")
+    ap.add_argument("--min-cond-count", type=int, default=10, help="Minimum sample count in conditional window")
     args = ap.parse_args()
 
-    # 解析 eps 列表
+    # Parse eps list
     dd_eps_list = []
     for t in args.dd_eps.split(','):
         t = t.strip()
@@ -347,7 +342,7 @@ def main():
             )
     else:
         if not (args.surf and args.sub and args.hea_name):
-            ap.error("单对模式需提供 --surf --sub --hea-name；或使用 --pair 多对模式。")
+            ap.error("Single-pair mode requires --surf, --sub, and --hea-name; or use --pair for multi-pair mode.")
         rows.append(
             compute_metrics_for_pair(
                 args.surf, args.sub, hea_name=args.hea_name,
@@ -359,27 +354,27 @@ def main():
 
     df = pd.DataFrame(rows)
 
-    # 期望列顺序（缺的会自动补 NaN）
+    # Expected column order (Missing columns will be filled with NaN)
     base_cols = [
         "HEA",
         "mu_surf_eV","sigma_surf_eV","n_surf",
         "mu_sub_eV","sigma_sub_eV","n_sub",
         "EOC",
-        # 全分布 DD：
+        # Global DD:
         "DD_S2Sub_eps0","DD_Sub2S_eps0",
         "DD_S2Sub_eps005","DD_Sub2S_eps005",
         "DD_S2Sub_eps010","DD_Sub2S_eps010",
-        # NOF：
+        # NOF:
         "NOF_Surf_w005","NOF_Sub_w005","NOF_Surf_w010","NOF_Sub_w010",
-        # ShuttleBand：
+        # ShuttleBand:
         "SB_Surf_mass_k1","SB_Sub_mass_k1","SB_width_k1_eV","SB_lo_k1_eV","SB_hi_k1_eV",
         "SB_Surf_mass_k15","SB_Sub_mass_k15","SB_width_k15_eV","SB_lo_k15_eV","SB_hi_k15_eV",
-        # EmpBand：
+        # EmpBand:
         "EmpBand68_width_eV","EmpBand68_surf_mass","EmpBand68_sub_mass",
         "EmpBand68_surf_count","EmpBand68_sub_count","EmpBand68_lo_eV","EmpBand68_hi_eV",
         "EmpBand866_width_eV","EmpBand866_surf_mass","EmpBand866_sub_mass",
         "EmpBand866_surf_count","EmpBand866_sub_count","EmpBand866_lo_eV","EmpBand866_hi_eV",
-        # 条件 DD（EmpBand866 / SBk15 / SBk1）：
+        # Conditional DD (EmpBand866 / SBk15 / SBk1):
         "DD_S2Sub_EmpBand866_eps0","DD_Sub2S_EmpBand866_eps0",
         "DD_S2Sub_EmpBand866_eps005","DD_Sub2S_EmpBand866_eps005",
         "DD_S2Sub_EmpBand866_eps010","DD_Sub2S_EmpBand866_eps010",
@@ -400,3 +395,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
