@@ -1,4 +1,4 @@
-# HELIOS Hydrogen-Evolution-via-Learning-Intelligent-Optimization-of-Superalloys
+# Physics-constrained High-entropy Optimization and Exploration (PHEONIX) framework
 Machine learning drives automated modeling of high-entropy alloys and prediction of hydrogen production performance
 
 ![Workflow Diagram](workflow.png)
