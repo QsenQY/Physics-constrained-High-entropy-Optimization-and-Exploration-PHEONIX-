@@ -41,7 +41,7 @@ The PHEONIX framework automates the following key computational stages:
 
 
 ## External Dependencies
-**fairchem
+fairchem-core
 
 - **Documentation** (upstream):  
   https://github.com/facebookresearch/fairchem#readme
