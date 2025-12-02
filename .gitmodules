@@ -1,6 +1,3 @@
 [submodule "fairchem"]
 	path = fairchem
 	url = https://github.com/QsenQY/fairchem.git
-[submodule "mattergen"]
-	path = mattergen
-	url = https://github.com/QsenQY/mattergen.git
