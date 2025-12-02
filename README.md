@@ -1,10 +1,36 @@
 # Physics-constrained High-entropy Optimization and Exploration (PHEONIX) framework
-Machine learning drives automated modeling of high-entropy alloys and prediction of hydrogen production performance
 
 ![Workflow Diagram](workflow.png)
 
-## Abstract
-High-entropy alloy materials demonstrate exceptional catalytic properties due to their distinctive multi-component attributes and electronic effects. Nonetheless, the extensive data landscape of high-entropy alloys presents substantial hurdles in identifying high-performance catalysts. Compounding this challenge is the anisotropic character of surface sites within each catalyst, rendering performance prediction exceedingly difficult with conventional computational techniques. Although contemporary machine learning models have achieved significant advances in predicting properties for specific principal element combinations of high-entropy alloys, they encounter difficulties when modeling random combinations of principal elements and their concentrations. In this context, we introduce a closed-loop high-throughput workflow that integrates high-throughput automated modeling and performance prediction of high-entropy alloys and adsorption structures, along with a high-throughput synthesis method leveraging microchannel technology. We apply a previously established thermodynamic model to forecast the stability of principal element combinations and harness the MatterGen high-throughput modeling approach to screen 133,233 thermodynamically stable high-entropy alloy materials. Utilizing the high-throughput automated workflow, we have generated over 1,160,000 hydrogen atom adsorption models and, for the first time, have successfully predicted hydrogen adsorption energies using the EquiformerV2 model, pinpointing five high-entropy alloy materials with superior catalytic performance. These materials have been successfully synthesized via microchannel technology, and electrochemical experiments have confirmed their outstanding catalytic properties (overpotential = 5.5–9 mV). Statistical analysis indicates that the performance of active sites on high-entropy alloy surfaces adheres to a bimodal distribution. The unique electronic and structural synergy in high-entropy alloys substantially diminishes the inherent properties of principal elements, leading to localized averaging effects. This research presents innovative concepts and methodologies for navigating the data space of high-entropy alloy materials and for high-throughput prediction of catalytic performance.
+## Introduction
+
+**PHEONIX** is a closed-loop high-throughput computational framework designed for the exploration and optimization of High-Entropy Alloys (HEAs) in catalysis.
+
+Navigating the vast compositional and configurational space of HEAs presents a significant challenge for traditional DFT methods. PHEONIX addresses this by integrating thermodynamic rules, Monte Carlo sampling, topological analysis, and geometric deep learning (EquiformerV2) to accelerate the discovery of high-performance catalysts.
+
+
+## Framework Overview
+
+The PHEONIX framework automates the following key computational stages:
+
+1.  **Thermodynamics-Guided Structure Generation:**
+    *   Utilizes **Monte Carlo (MC)** sampling strictly governed by multidimensional thermodynamic constraints ($\Delta S_{mix}$, $\Delta H_{mix}$, $\delta$, and $\Omega$).
+    *   Explicitly models lattice distortions and chemical disorder to generate Stable, Unique, and New (SUN) HEA candidates.
+
+2.  **3D Topological Site Enumeration:**
+    *   Goes beyond traditional 2D surface models by implementing a topology-based algorithm to identify adsorption sites on both **Surface** (Top, Bridge, Hollow) and **Sub-surface** layers.
+    *   Enables the investigation of cross-layer diffusion channels and subsurface mechanisms.
+
+3.  **ML-Accelerated Energy Mapping:**
+    *   Integrates the **EquiformerV2** graph neural network to predict adsorption free energies ($\Delta G_{H*}$) with DFT-level accuracy.
+    *   Capable of handling massive datasets (demonstrated on >1.16 million sites) to map the complete energy landscape.
+
+4.  **Statistical Descriptor Analysis:**
+    *   Implements novel statistical descriptors to quantify energy distributions:
+        *   **Energy Overlap Coefficient (EOC):** Measures the thermodynamic coupling between surface and subsurface layers.
+        *   **Empirical Band Intersection (EmpBand):** Identifies the active energy window for diffusion.
+        *   **Directional Drivability (DD):** Quantifies the thermodynamic driving force for surface-to-subsurface transport.
+
 
 
 ## Data release
@@ -31,14 +57,6 @@ git submodule update --init --recursive
 - **Source (pinned)**:  
   https://github.com/QsenQY/fairchem/tree/977a80328f2be44649b414a9907a1d6ef2f81e95
 
-
-### mattergen
-
-- **Documentation** (upstream):  
-  https://github.com/microsoft/mattergen#readme
-
-- **Source (pinned)**:  
-  https://github.com/QsenQY/mattergen/tree/ec029d177c93709fa9a2ea4e48b872760d09c63b
 
 ### Generate HEAs Structues
 ### `generate_hea.py`
