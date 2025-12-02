@@ -39,15 +39,6 @@ The PHEONIX framework automates the following key computational stages:
 - **v1.1** Release:  
   - [Data.zip (all models and adsorption‐energy statistics)].(https://github.com/QsenQY/HELIOS-Hydrogen-Evolution-via-Learning-Intelligent-Optimization-of-Superalloys-/releases/download/V1.0.2/Data.zip).
 
-## External Dependencies
-
-This project uses Git submodules to integrate two external repositories. Before proceeding, clone and initialize all submodules:
-
-```bash
-git clone --recurse-submodules git@github.com:QsenQY/HELIOS-Hydrogen-Evolution-via-Learning-Intelligent-Optimization-of-Superalloys-.git
-cd HELIOS-Hydrogen-Evolution-via-Learning-Intelligent-Optimization-of-Superalloys-
-git submodule update --init --recursive
-```
 
 ### fairchem
 
