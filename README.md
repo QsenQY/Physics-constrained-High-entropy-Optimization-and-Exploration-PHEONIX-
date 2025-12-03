@@ -37,7 +37,7 @@ The PHEONIX framework automates the following key computational stages:
 
 
 - **v1.1** Release:  
-  - [Data.zip (all models and adsorption‐energy statistics)].(https://github.com/QsenQY/HELIOS-Hydrogen-Evolution-via-Learning-Intelligent-Optimization-of-Superalloys-/releases/download/V1.0.2/Data.zip).
+  - [Data.zip (all HEAs models and adsorption‐energy statistics)].(https://huggingface.co/datasets/QsenQY/PHEONIX-framework-data).
 
 
 ### External Dependencies
