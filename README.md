@@ -37,7 +37,7 @@ The PHEONIX framework automates the following key computational stages:
 
 
 - **v1.1** Release:  
-  - [Data.zip (all HEAs models and adsorption‐energy statistics)].(https://huggingface.co/datasets/QsenQY/PHEONIX-framework-data).
+  - [Data.zip (all HEAs models and adsorption‐energy statistics)].(https://huggingface.co/datasets/QsenQY/PHEONIX-framework-data/tree/main).
 
 
 ### External Dependencies
